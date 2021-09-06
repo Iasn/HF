@@ -1,0 +1,87 @@
+Differential expression analysis
+library(limma)
+Setwd(“   ”)
+exprSet <- read.csv (“   ”)
+
+row.names(exprSet)= exprSet [,1]
+exprSet = exprSet [,-1]
+
+group <- factor(c(rep('control',n),rep('HF',n)))
+design <- model.matrix(~0+group)
+colnames(design) = levels(factor(group))
+rownames(design) = colnames(group)
+design
+
+norm <- voom(exprSet, design, plot = TRUE)
+
+boxplot(norm$E)
+plotDensities(norm$E)
+
+fit <- lmFit(norm, design, method = 'ls')
+
+contrast <- makeContrasts('HF- Control', levels = design)
+contrast
+
+fit2 <- contrasts.fit(fit, contrast)
+fit2 <- eBayes(fit2) 
+
+qqt(fit2$t, df = fit2$df.prior+fit2$df.residual, pch = 16, cex = 0.2)
+abline(0,1)
+
+diff_gene <- topTable(fit2, number = Inf, adjust.method = 'fdr')
+head(diff_gene, n)
+
+Volcano plot 
+library(ggplot2)
+temp<-read.table("   ",header=T,sep="\t",quote="")
+
+temp$threshold[temp$padj < 0.05 & temp$log2FoldChange>0 ] = "up"
+
+temp$threshold[temp$padj < 0.05 & temp$log2FoldChange<0 ] = "down"
+
+temp$threshold[temp$padj > 0.05 & (temp$log2FoldChange>=0 | temp$log2FoldChange <= 0)] = "non"
+
+p<-ggplot(temp,aes(x=temp$log2FoldChange,y=-log10(temp$padj),colour=threshold))+xlab("log2(Fold Change)")+ylab("-log10(p-Value)")+ geom_point(size=4,alpha=0.6)+ scale_color_manual(values =c("   ","grey","   "))+ geom_hline(aes(yintercept=-log10(0.05)),colour="grey",size=1.2,linetype=2)+ geom_vline(aes(xintercept=0), colour="grey",size=1.2,linetype=2)
+
+Heatmap plot
+library(pheatmap)
+Setwd(“   ”)
+Test <- read.csv(“   ”)
+pheatmap(test,treeheight_row=100,treeheight_col=20,cluster_cols=TURE,color=colorRampPalette(c("green","black","red"))(1000),border_color=TURE,fontsize=10,fontsize_ row=8,fontsize_col=16,file='   ')
+
+GO/KEGG functional enrichment analysis
+If(!requireNamespace("BiocManager", quietly = TRUE))
+
+install.packages("BiocManager")
+BiocManager::install("clusterProfiler")
+library(clusterProfiler)
+library(AnnotationHub)
+library(org.Hs.eg.db)
+library(ggplot2)
+library(DOSE)
+
+go_ythdf2 <- read.table("   ",sep="   ")
+go_ythdf2 <- t(go_ythdf2)
+keytypes(org.Hs.eg.db)
+go_ythdf2_id_trance <- bitr(go_ythdf2,fromType = "SYMBOL",toType = "ENSEMBL",OrgDb = "org.Hs.eg.db",drop = T)
+write.table(go_ythdf2_id_trance,"go_ythdf2_id_trance.txt")
+
+f <- read.table("   ")
+f <- f[c(1)]
+
+EG2Ensembl=toTable(org.Hs.egENSEMBL)
+f=f$V1
+geneLists=data.frame(ensembl_id=f)
+results=merge(geneLists,EG2Ensembl,by='ensembl_id',all.x=T)
+id=na.omit(results$gene_id)
+
+All <- enrichGO(OrgDb="org.Hs.eg.db", gene = id, ont = "ALL",  readable= TRUE) 
+dotplot(All,showCategory=10,title="Enrichment GO Up-Gene") 
+barplot(All, showCategory=20,title="EnrichmentGO")  
+dotplot(All, split="ONTOLOGY")+ facet_grid(ONTOLOGY~.,scale="free")
+
+KEGG <- enrichKEGG(gene= id, organism  = 'hsa', pvalueCutoff = 0.05) 
+dotplot(KEGG,font.size=12)
+barplot(KEGG,font.size=8) 
+dotplot(KEGG,showCategory=10,title="Enrichment KEGG Top10") 
+dotplot(KEGG, font.size=8, showCategory=10, title="Enrichment KEGG Top10") + scale_size(rang=c(5.20))
